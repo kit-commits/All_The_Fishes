@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buttons</title>
+    <style>
+        /*
+        canvas {
+            filter: blur(10px);
+        }*/
+    </style>
+</head>
+<body>
+<script type="module">
+
+//All of our Pixi code goes here
+
+//Import Pixi
+import {
+    Application,
+    Assets,
+    Sprite,
+    Container,
+    Graphics,
+    Text,
+    TextStyle
+} from './js/pixi.js';
+
+//Create new app
+const app = new Application();
+
+//Initialize app
+await app.init({ 
+    background: 0x66CC66,
+    width:640,
+    height:480
+});
+document.body.appendChild(app.canvas);
+
+//We're making a button
+// let whatever = new Button("Name",200,60);
+class Button extends Container {
+
+    //Constructor
+    constructor(l, w, h) {
+        super(); //Set up the old object
+
+        //Build the button
+        this.l = l;
+        this.w = w;
+        this.h = h;
+        this.c = 0xFFFFFF;
+
+        //Make it listen for events
+        this.eventMode = 'static';
+
+        //Draw the button
+        this.draw();
+
+        //Set hover states
+        this.on('mouseover',() => {
+            this.alpha = .85;
+            this.cursor = "pointer";
+        });
+        this.on('mouseout',() => {
+            this.alpha = 1;
+            this.cursor = "auto";
+        });
+    }
+    //Actually set everything up
+    draw() {
+        //Empty it out
+        while(this.children.length > 0)
+            this.removeChildAt(0);
+
+        //The body
+        this.body = new Graphics()
+                    .rect(0,0, this.w, this.h)
+                    .fill(this.c);
+        this.addChild(this.body);
+
+        //The label
+        this.label = new Text({
+            text: this.l,
+            anchor:.5
+        });
+        this.label.x = this.w/2;
+        this.label.y = this.h/2;
+        this.addChild(this.label);
+    }
+    //Set the label
+    setLabel(name) {
+        this.l = name;
+        this.draw();
+    }
+    //Set color
+    setColor(color) {
+        this.c = color;
+        this.draw();
+    }
+    //Set size
+    setSize(w,h) {
+        this.w = w;
+        this.h = h;
+        this.draw();
+    }
+
+}
+
+let button =  new Button("Boo!",200,60);
+    button.x = 100;
+    button.y = 200;
+    button.setLabel("Hello there!");
+    button.setColor("gray");
+    button.setSize(200,100);
+console.log(button.l, button.w, button.h);
+app.stage.addChild(button);
+
+button.on('click',() => {
+    alert("clicked!");
+});
+
+//This one will be draggable
+let button2 = new Button("Hi there!",200,40);
+    button2.x = 400;
+    button2.y = 400;
+
+app.stage.addChild(button2);
+
+//Set flag
+let dragging = false;
+//Begin dragging (pointerdown)
+button2.on('pointerdown', () => {
+    dragging = true; console.log("Down");
+});
+//Dragging (pointermove)
+button2.on('globalpointermove', (event) => {
+    console.log(event.global);
+    if (dragging) {
+        button2.x = event.global.x - button2.w/2;
+        button2.y = event.global.y - button2.h/2;
+    }
+});
+//End dragging (pointerup, pointerupoutside)
+button2.on('pointerup', () => {
+    dragging = false; console.log("Up");
+});
+button2.on('pointerupoutside', () => {
+    dragging = false; console.log("Up");
+});
+
+
+class Slider extends Container {
+
+    constructor(w) {
+        super();
+
+        //Save variables
+        this.w = w;
+
+        //Track
+        this.track = new Graphics()
+                    .rect(0,0, w, 5)
+                    .fill("gray");
+        this.addChild(this.track);
+
+        //Button
+        this.button = new Button("",40,40);
+        this.addChild(this.button);
+
+        //Make it draggable
+        //Set flag
+        let dragging = false;
+        //Begin dragging (pointerdown)
+        this.button.on('pointerdown', () => {
+            dragging = true; console.log("Down");
+        });
+        //Dragging (pointermove)
+        this.button.on('globalpointermove', (event) => {
+            console.log(event.global);
+            if (dragging) {
+                this.button.x = event.global.x - this.button.w/2;
+                this.button.y = event.global.y - this.button.h/2;
+            }
+        });
+        //End dragging (pointerup, pointerupoutside)
+        this.button.on('pointerup', () => {
+            dragging = false; console.log("Up");
+        });
+        this.button.on('pointerupoutside', () => {
+            dragging = false; console.log("Up");
+        });
+
+    }
+
+}
+
+let s = new Slider(300);
+    s.x = 200;
+    s.y = 100;
+app.stage.addChild(s);
+
+
+
+</script>    
+</body>
+</html>

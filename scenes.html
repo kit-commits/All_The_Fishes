@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animations</title>
+</head>
+<body>
+    
+<script type="module">
+
+//All of our Pixi code goes here
+
+//Import Pixi
+import {
+    Application,
+    Assets,
+    Sprite,
+    Container,
+    Graphics,
+    Text,
+    TextStyle
+} from './js/pixi.js';
+
+//Import Animation
+import { Animate, sleep } from './js/animate.js';
+
+//Import Button
+import { Button } from './js/button.js';
+
+//Import Director
+import { Director } from './js/director.js';
+
+//Create new app
+const app = new Application();
+
+//Initialize app
+await app.init({ 
+    background: 0xCC6666,
+    width:640,
+    height:480
+});
+document.body.appendChild(app.canvas);
+
+// Load the fish texture. If fetch-based loading fails (common on file://),
+// fall back to an Image-based sprite load.
+let texture;
+try {
+    texture = await Assets.load('img/fish.png');
+} catch (error) {
+    texture = Sprite.from('img/fish.png').texture;
+}
+
+// Create a new Sprite from an image path
+const fishsprite1 = new Sprite(texture);
+      fishsprite1.scale.set(.3);
+
+//Bring in the Director
+let director = new Director(app.stage);
+
+//Create some scenes
+
+//Scene 1
+let scene1 = new Container();
+    scene1.addChild(fishsprite1);
+
+let button1 = new Button("To Scene 2",200,50);
+    button1.x = app.canvas.width - button1.w;
+    button1.y = app.canvas.height - button1.h;
+    scene1.addChild(button1);
+
+director.addScene("scene1",scene1);
+
+//Scene 2
+let scene2 = new Container();
+
+let button2 = new Button("To Scene 3",200,50);
+    button2.y = app.canvas.height - button2.h;
+    scene2.addChild(button2);
+
+director.addScene("scene2",scene2);
+
+//Scene 3
+let scene3 = new Container();
+
+let fishsprite2 = new Sprite(texture);
+    fishsprite2.scale.set(0.22);
+    fishsprite2.position.set(120, 180);
+    fishsprite2.tint = 0x66CCFF;
+    scene3.addChild(fishsprite2);
+
+let fishsprite3 = new Sprite(texture);
+    fishsprite3.scale.set(0.28);
+    fishsprite3.position.set(300, 220);
+    fishsprite3.tint = 0xFFCC66;
+    scene3.addChild(fishsprite3);
+
+let fishsprite4 = new Sprite(texture);
+    fishsprite4.scale.set(-0.24, 0.24);
+    fishsprite4.position.set(500, 150);
+    fishsprite4.tint = 0xFF8888;
+    scene3.addChild(fishsprite4);
+
+let button3 = new Button("Back To Scene 1",220,50);
+    button3.x = (app.canvas.width - button3.w) / 2;
+    button3.y = app.canvas.height - button3.h;
+    scene3.addChild(button3);
+
+director.addScene("scene3",scene3);
+
+// Start on Scene 3 so the three-fish screen appears immediately.
+director.showScene("scene3", {
+    transition: director.cut
+});
+
+//Rig up buttons
+button1.on("click", () => {
+    director.showScene("scene2", {
+        transition: director.fade
+    });
+});
+button2.on("click", () => {
+    director.showScene("scene3", {
+        transition: director.fade
+    });
+});
+button3.on("click", () => {
+    director.showScene("scene1", {
+        transition: director.fade
+    });
+});
+
+
+</script>
+
+</body>
+</html>
