@@ -372,6 +372,150 @@ function cycleColor(time) {
     return (red << 16) + (green << 8) + blue;
 }
 
+// ==================== BONUS FEATURES ====================
+// Combine all fish into one array for easier access
+const allFish = [...soloFish, ...schoolFish];
+
+// Create a color-change button
+const colorButtonBg = new Graphics()
+    .roundRect(0, 0, 200, 70, 8)
+    .fill({ color: 0x7b69b8, alpha: 0.95 });
+
+const colorButtonText = new Graphics()
+    .rect(0, 0, 140, 50)
+    .fill({ color: 0xFFFFFF, alpha: 0 }); // Invisible fill for text area
+
+const colorButton = new Container();
+colorButton.addChild(colorButtonBg);
+colorButton.x = 30;
+colorButton.y = 270 - 40 - 10;
+colorButton.eventMode = 'static';
+colorButton.cursor = 'pointer';
+aquarium.addChild(colorButton);
+
+// Add hover effect to button
+colorButton.on('mouseover', () => {
+    colorButtonBg.alpha = 0.7;
+});
+colorButton.on('mouseout', () => {
+    colorButtonBg.alpha = 0.95;
+});
+
+// Create available colors for random selection
+const buttonColorOptions = [0x1E90FF, 0x00CED1, 0x20B2AA, 0x4169E1, 0x9370DB, 0x00BFFF, 0x3CB371];
+
+// Button click handler: change a random fish's color
+colorButton.on('pointertap', () => {
+    if (allFish.length > 0) {
+        const randomFish = allFish[Math.floor(Math.random() * allFish.length)];
+        const newColor = buttonColorOptions[Math.floor(Math.random() * buttonColorOptions.length)];
+        randomFish.sprite.tint = newColor;
+    }
+});
+
+// ==================== DRAGGABLE FISH ====================
+// Make the leader fish draggable
+let isDraggingFish = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+leaderFish.eventMode = 'dynamic';
+leaderFish.cursor = 'grab';
+
+leaderFish.on('pointerdown', (event) => {
+    isDraggingFish = true;
+    const rect = app.canvas.getBoundingClientRect();
+    const scaleX = app.canvas.width / rect.width;
+    const scaleY = app.canvas.height / rect.height;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    // Add a factor that reduces the offset so the fish doesn't jump to the mouse position immediately
+    const slowFactor = 0.6; 
+    
+    dragOffsetX = (leaderFish.x - canvasX) * slowFactor;
+    dragOffsetY = (leaderFish.y - canvasY) * slowFactor;
+
+    leaderFish.cursor = 'grabbing';
+});
+
+app.canvas.addEventListener('pointermove', (event) => {
+    if (isDraggingFish) {
+        const rect = app.canvas.getBoundingClientRect();
+        const scaleX = app.canvas.width / rect.width;
+        const scaleY = app.canvas.height / rect.height;
+        const canvasX = (event.clientX - rect.left) * scaleX;
+        const canvasY = (event.clientY - rect.top) * scaleY;
+        leaderFish.x = canvasX + dragOffsetX;
+        leaderFish.y = canvasY + dragOffsetY;
+        clampFishToTank(leaderFish, 2);
+    }
+});
+
+app.canvas.addEventListener('pointerup', () => {
+    isDraggingFish = false;
+    leaderFish.cursor = 'grab';
+});
+
+// Slider Setup
+const sliderX = 20;
+const sliderY = 350;
+const sliderTrackWidth = 150;
+const sliderTrackHeight = 8;
+
+// Create the track
+const sliderTrack = new Graphics()
+    .rect(0, 0, sliderTrackWidth, sliderTrackHeight)
+    .fill({ color: 0xCCCCCC, alpha: 0.8 });
+sliderTrack.x = sliderX;
+sliderTrack.y = sliderY;
+aquarium.addChild(sliderTrack);
+
+// Create the handle
+const sliderHandle = new Graphics()
+    .circle(0, 0, 20)
+    .fill({ color: 0x1E90FF, alpha: 0.9 });
+sliderHandle.x = sliderX + (sliderTrackWidth / 2);
+sliderHandle.y = sliderY;
+sliderHandle.eventMode = 'static';
+sliderHandle.cursor = 'pointer';
+aquarium.addChild(sliderHandle);
+
+// Slider state
+let isDraggingSlider = false;
+let sliderValue = 0.5; // 0 to 1
+
+// Handle events
+sliderHandle.on('pointerdown', () => {
+    isDraggingSlider = true;
+});
+
+app.canvas.addEventListener('pointermove', (event) => {
+    if (isDraggingSlider) {
+        const rect = app.canvas.getBoundingClientRect();
+        const scaleX = app.canvas.width / rect.width;
+        const canvasX = (event.clientX - rect.left) * scaleX;
+        
+        // Clamp to track bounds
+        const minX = sliderX;
+        const maxX = sliderX + sliderTrackWidth;
+        const newX = Math.max(minX, Math.min(maxX, canvasX));
+        
+        sliderHandle.x = newX;
+        sliderValue = (newX - sliderX) / sliderTrackWidth;
+        
+        // Apply effect: scale all fish based on slider
+        allFish.forEach(fish => {
+            fish.scale.x = 0.9 + (sliderValue * 0.2); // 0.5x to 2x
+            fish.scale.y = 0.9 + (sliderValue * 0.2);
+        });
+    }
+});
+
+app.canvas.addEventListener('pointerup', () => {
+    isDraggingSlider = false;
+});
+
 // The ticker runs every frame and updates positions, scale, rotation, and tint.
 app.ticker.add((ticker) => {
     const time = ticker.lastTime;
@@ -379,6 +523,11 @@ app.ticker.add((ticker) => {
 
     // Animate the solo fish one by one.
     soloFish.forEach((fish, index) => {
+        // Skip normal animation if the fish is being dragged
+        if (fish === leaderFish && isDraggingFish) {
+            return;
+        }
+
         const motion = time * fish.speed + fish.phase;
         const flap = Math.sin(time * 0.03 + index) * 0.016;
         const bob = Math.sin(motion * 2.4) * fish.amplitude;

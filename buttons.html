@@ -89,6 +89,15 @@ class Button extends Container {
         this.label.y = this.h/2;
         this.addChild(this.label);
     }
+
+    // Add button to the application stage
+    addToStage(stage) {
+        stage.addChild(this);
+    }
+
+    // Make it listen to events
+    // this.eventMode = 'static'; // This line is misplaced and should be removed
+
     //Set the label
     setLabel(name) {
         this.l = name;
@@ -99,6 +108,20 @@ class Button extends Container {
         this.c = color;
         this.draw();
     }
+
+    // Make it listen to events
+    // this.eventMode = 'static'; // This line is misplaced and should be removed
+
+    // Add hover states
+    // this.on('mouseover',() => {
+    //     this.alpha = .85;
+    //     this.cursor = "pointer";
+    // });
+    // this.on('mouseout',() => {
+    //     this.alpha = 1;
+    //     this.cursor = "auto";
+    // });
+
     //Set size
     setSize(w,h) {
         this.w = w;
@@ -121,88 +144,98 @@ button.on('click',() => {
     alert("clicked!");
 });
 
-//This one will be draggable
-let button2 = new Button("Hi there!",200,40);
-    button2.x = 400;
-    button2.y = 400;
+// ========== Color Button ==========
+const fishColorOptions = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF];
 
-app.stage.addChild(button2);
+const colorButton = new Button("Change Color", 150, 50);
+colorButton.x = 50;
+colorButton.y = 350;
+app.stage.addChild(colorButton);
 
-//Set flag
-let dragging = false;
-//Begin dragging (pointerdown)
-button2.on('pointerdown', () => {
-    dragging = true; console.log("Down");
+// Create a test fish for color changes
+const testFish = new Container();
+const testFishBody = new Graphics()
+    .circle(0, 0, 25)
+    .fill({ color: 0xFF0000 });
+testFish.addChild(testFishBody);
+testFish.x = 100;
+testFish.y = 250;
+app.stage.addChild(testFish);
+
+colorButton.on('click', () => {
+    const randomIndex = Math.floor(Math.random() * fishColorOptions.length);
+    const newColor = fishColorOptions[randomIndex];
+    testFish.children[0].clear().circle(0, 0, 25).fill({ color: newColor });
 });
-//Dragging (pointermove)
-button2.on('globalpointermove', (event) => {
-    console.log(event.global);
-    if (dragging) {
-        button2.x = event.global.x - button2.w/2;
-        button2.y = event.global.y - button2.h/2;
+
+// ========== Draggable Fish ==========
+const fish = new Container();
+const fishBody = new Graphics()
+    .ellipse(0, 0, 40, 25)
+    .fill({ color: 0xFFA500 });
+fish.addChild(fishBody);
+fish.x = 300;
+fish.y = 200;
+fish.eventMode = 'dynamic';
+app.stage.addChild(fish);
+
+let isDragging = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+
+fish.on('pointerdown', (event) => {
+    isDragging = true;
+    dragOffsetX = fish.x - event.global.x;
+    dragOffsetY = fish.y - event.global.y;
+});
+
+app.stage.on('pointermove', (event) => {
+    if (isDragging) {
+        fish.x = event.global.x + dragOffsetX;
+        fish.y = event.global.y + dragOffsetY;
     }
 });
-//End dragging (pointerup, pointerupoutside)
-button2.on('pointerup', () => {
-    dragging = false; console.log("Up");
-});
-button2.on('pointerupoutside', () => {
-    dragging = false; console.log("Up");
+
+app.stage.on('pointerup', () => {
+    isDragging = false;
 });
 
+// ========== Bonus Slider ==========
+const sliderBg = new Graphics()
+    .rect(0, 0, 200, 12)
+    .fill({ color: 0xCCCCCC });
+sliderBg.x = 50;
+sliderBg.y = 450;
+app.stage.addChild(sliderBg);
 
-class Slider extends Container {
+const sliderHandle = new Graphics()
+    .circle(0, 0, 15)
+    .fill({ color: 0x0000FF });
+sliderHandle.x = 50;
+sliderHandle.y = 456;
+sliderHandle.eventMode = 'dynamic';
+app.stage.addChild(sliderHandle);
 
-    constructor(w) {
-        super();
+let isSliderDragging = false;
 
-        //Save variables
-        this.w = w;
+sliderHandle.on('pointerdown', () => {
+    isSliderDragging = true;
+});
 
-        //Track
-        this.track = new Graphics()
-                    .rect(0,0, w, 5)
-                    .fill("gray");
-        this.addChild(this.track);
-
-        //Button
-        this.button = new Button("",40,40);
-        this.addChild(this.button);
-
-        //Make it draggable
-        //Set flag
-        let dragging = false;
-        //Begin dragging (pointerdown)
-        this.button.on('pointerdown', () => {
-            dragging = true; console.log("Down");
-        });
-        //Dragging (pointermove)
-        this.button.on('globalpointermove', (event) => {
-            console.log(event.global);
-            if (dragging) {
-                this.button.x = event.global.x - this.button.w/2;
-                this.button.y = event.global.y - this.button.h/2;
-            }
-        });
-        //End dragging (pointerup, pointerupoutside)
-        this.button.on('pointerup', () => {
-            dragging = false; console.log("Up");
-        });
-        this.button.on('pointerupoutside', () => {
-            dragging = false; console.log("Up");
-        });
-
+app.stage.on('pointermove', (event) => {
+    if (isSliderDragging) {
+        const newX = Math.max(50, Math.min(250, event.global.x));
+        sliderHandle.x = newX;
+        const percentage = (newX - 50) / 200;
+        const scale = 0.5 + percentage * 1.5;
+        fish.scale.set(scale);
     }
+});
 
-}
+app.stage.on('pointerup', () => {
+    isSliderDragging = false;
+});
 
-let s = new Slider(300);
-    s.x = 200;
-    s.y = 100;
-app.stage.addChild(s);
-
-
-
-</script>    
+</script>
 </body>
 </html>
