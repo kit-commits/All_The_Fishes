@@ -34,6 +34,7 @@ import {
     Container,
     Graphics
 } from './js/pixi.js';
+import { Animate, sleep } from './js/animate.js';
 
 // Create the Pixi application and its drawing surface.
 const app = new Application();
@@ -200,6 +201,84 @@ glass.rect(tank.left + 24, tank.top + 18, 28, tank.bottom - tank.top - 84).fill(
 glass.rect(tank.right - 74, tank.top + 50, 11, tank.bottom - tank.top - 150).fill({ color: 0xffffff, alpha: 0.07 });
 aquarium.addChild(glass);
 
+const shimmer = new Container();
+const shimmerBands = new Graphics()
+    .rect(118, 154, 660, 14).fill({ color: 0xd2e7ff, alpha: 0.045 })
+    .rect(162, 238, 574, 12).fill({ color: 0xe2f0ff, alpha: 0.035 })
+    .rect(214, 324, 510, 10).fill({ color: 0xf0f7ff, alpha: 0.03 });
+const surfaceGlow = new Graphics()
+    .ellipse(app.screen.width / 2, tank.top + 18, 290, 30)
+    .fill({ color: 0xffffff, alpha: 0.08 });
+shimmer.addChild(shimmerBands);
+shimmer.addChild(surfaceGlow);
+aquarium.addChild(shimmer);
+
+async function animateTankPulse() {
+    while (true) {
+        await Promise.all([
+            Animate.to(water, {
+                duration: 1800,
+                alpha: 0.94,
+                tint: 0x5f7ade,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(glass, {
+                duration: 1800,
+                alpha: 0.13,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(depthGlow, {
+                duration: 1800,
+                scaleX: 1.03,
+                scaleY: 1.03,
+                alpha: 1,
+                tint: 0x9ec5ff,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(shimmer, {
+                duration: 1800,
+                x: 7,
+                y: -1,
+                alpha: 0.97,
+                rotation: 0.004,
+                easing: Animate.easeInOut
+            })
+        ]);
+
+        await Promise.all([
+            Animate.to(water, {
+                duration: 1800,
+                alpha: 0.88,
+                tint: 0x4d63c9,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(glass, {
+                duration: 1800,
+                alpha: 0.09,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(depthGlow, {
+                duration: 1800,
+                scaleX: 1,
+                scaleY: 1,
+                alpha: 0.92,
+                tint: 0xffffff,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(shimmer, {
+                duration: 1800,
+                x: 0,
+                y: 0,
+                alpha: 1,
+                rotation: 0,
+                easing: Animate.easeInOut
+            })
+        ]);
+    }
+}
+
+animateTankPulse();
+
 // Create one fish container, attach its sprite, and store its motion settings.
 function createFish(config) {
     const fish = new Container();
@@ -292,6 +371,12 @@ const soloFish = [
     createFish(SOLO_FISH_SETTINGS.drifter)
 ];
 const leaderFish = soloFish[0];
+const tapFish = soloFish[1];
+const surfaceFish = soloFish[2];
+const fishScriptState = {
+    surfaceFish: 'idle',
+    tapFish: 'idle'
+};
 soloFish.forEach((fish) => aquarium.addChild(fish));
 
 // The mouseTarget object is used to smoothly move the leader fish toward the mouse pointer.
@@ -324,6 +409,81 @@ function updateLeaderFish() {
     const dy = mouseTarget.y - leaderFish.baseY;
     leaderFish.baseX += dx * 0.05;
     leaderFish.baseY += dy * 0.05;
+}
+
+function clampTankPoint(x, y, padding = 24) {
+    return {
+        x: Math.max(tank.left + padding, Math.min(tank.right - padding, x)),
+        y: Math.max(tank.top + padding, Math.min(tank.bottom - padding, y))
+    };
+}
+
+function faceFishTowardX(fish, targetX) {
+    fish.facing = targetX >= fish.x ? 1 : -1;
+}
+
+async function runSurfaceFishSequence() {
+    if (fishScriptState.surfaceFish !== 'idle')
+        return;
+
+    fishScriptState.surfaceFish = 'swim-up';
+    faceFishTowardX(surfaceFish, surfaceFish.baseX);
+
+    await Animate.to(surfaceFish, {
+        duration: 900,
+        x: surfaceFish.baseX,
+        y: tank.top + 30,
+        rotation: -0.16,
+        easing: Animate.easeInOut
+    });
+
+    await sleep(250);
+
+    fishScriptState.surfaceFish = 'swim-down';
+    faceFishTowardX(surfaceFish, surfaceFish.baseX);
+
+    await Animate.to(surfaceFish, {
+        duration: 1100,
+        x: surfaceFish.baseX,
+        y: surfaceFish.baseY,
+        rotation: 0,
+        easing: Animate.easeInOut
+    });
+
+    fishScriptState.surfaceFish = 'idle';
+}
+
+async function runTapFishSequence(rawTargetX, rawTargetY) {
+    if (fishScriptState.tapFish !== 'idle')
+        return;
+
+    const target = clampTankPoint(rawTargetX, rawTargetY);
+
+    fishScriptState.tapFish = 'to-tap';
+    faceFishTowardX(tapFish, target.x);
+
+    await Animate.to(tapFish, {
+        duration: 1200,
+        x: target.x,
+        y: target.y,
+        rotation: -0.08,
+        easing: Animate.easeInOut
+    });
+
+    await sleep(200);
+
+    fishScriptState.tapFish = 'to-idle';
+    faceFishTowardX(tapFish, tapFish.baseX);
+
+    await Animate.to(tapFish, {
+        duration: 1200,
+        x: tapFish.baseX,
+        y: tapFish.baseY,
+        rotation: 0,
+        easing: Animate.easeInOut
+    });
+
+    fishScriptState.tapFish = 'idle';
 }
 
 // Use a parent container for the school so several fish can move together.
@@ -421,6 +581,28 @@ let dragOffsetY = 0;
 
 leaderFish.eventMode = 'dynamic';
 leaderFish.cursor = 'grab';
+surfaceFish.eventMode = 'static';
+surfaceFish.cursor = 'pointer';
+
+surfaceFish.on('pointertap', (event) => {
+    event.stopPropagation();
+
+    if (isDraggingFish || isDraggingSlider) {
+        return;
+    }
+
+    runSurfaceFishSequence();
+});
+
+glass.eventMode = 'static';
+glass.cursor = 'crosshair';
+glass.on('pointertap', (event) => {
+    if (isDraggingFish || isDraggingSlider) {
+        return;
+    }
+
+    runTapFishSequence(event.global.x, event.global.y);
+});
 
 leaderFish.on('pointerdown', (event) => {
     isDraggingFish = true;
@@ -525,6 +707,14 @@ app.ticker.add((ticker) => {
     soloFish.forEach((fish, index) => {
         // Skip normal animation if the fish is being dragged
         if (fish === leaderFish && isDraggingFish) {
+            return;
+        }
+
+        if (fish === surfaceFish && fishScriptState.surfaceFish !== 'idle') {
+            return;
+        }
+
+        if (fish === tapFish && fishScriptState.tapFish !== 'idle') {
             return;
         }
 
