@@ -3,15 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Animations</title>
+    <title>Animation Assignment</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(180deg, #be52ac 0%, #8a2a6a 45%, #54142c 100%);
+        }
+
+        canvas {
+            max-width: min(94vw, 900px);
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 24px 58px rgba(58, 9, 35, 0.45);
+        }
+    </style>
 </head>
 <body>
-    
+
 <script type="module">
-
-//All of our Pixi code goes here
-
-//Import Pixi
 import {
     Application,
     Assets,
@@ -22,50 +34,340 @@ import {
     TextStyle
 } from './js/pixi.js';
 
-//Import Animation
 import { Animate, sleep } from './js/animate.js';
-
-//Create new app
 const app = new Application();
-
-//Initialize app
-await app.init({ 
-    background: 0xCC6666,
-    width:640,
-    height:480
+await app.init({
+    background: 0x131f52,
+    width: 900,
+    height: 560,
+    antialias: true
 });
 document.body.appendChild(app.canvas);
 
-// Load the fish texture.
 const texture = await Assets.load('img/fish.png');
+const tank = new Container();
+app.stage.addChild(tank);
 
-// Create a new Sprite from an image path
-const fishsprite1 = new Sprite(texture);
-      fishsprite1.scale.set(.3);
+const bounds = {
+    left: 86,
+    right: 814,
+    top: 58,
+    bottom: 474
+};
 
-app.stage.addChild(fishsprite1);
+const frame = new Graphics()
+    .roundRect(66, 38, 768, 456, 28)
+    .fill({ color: 0x6b4e3b, alpha: 0.52 });
+tank.addChild(frame);
 
-async function swim() {
-    await Animate.to(fishsprite1,{
-        duration:1000,
-        x: 300,
-        y: 300,
-        tint: 0xFF0000,
-        easing: Animate.easeInOut
+const water = new Graphics()
+    .roundRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top, 18)
+    .fill({ color: 0xd7bb8a, alpha: 0.9 });
+tank.addChild(water);
+
+const depthGlow = new Graphics()
+    .ellipse(app.screen.width * 0.5, 320, 280, 164).fill({ color: 0xf4e7cf, alpha: 0.12 })
+    .ellipse(app.screen.width * 0.5, 298, 150, 90).fill({ color: 0xedd9b5, alpha: 0.11 });
+tank.addChild(depthGlow);
+
+const glass = new Graphics()
+    .roundRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top, 18)
+    .fill({ color: 0xffffff, alpha: 0.1 });
+glass.rect(bounds.left + 24, bounds.top + 26, 22, bounds.bottom - bounds.top - 86)
+    .fill({ color: 0xffffff, alpha: 0.09 });
+glass.rect(bounds.right - 62, bounds.top + 50, 10, bounds.bottom - bounds.top - 140)
+    .fill({ color: 0xffffff, alpha: 0.07 });
+tank.addChild(glass);
+
+const shimmer = new Graphics()
+    .rect(bounds.left + 28, bounds.top + 86, bounds.right - bounds.left - 54, 14)
+    .fill({ color: 0xf3e7d5, alpha: 0.07 })
+    .rect(bounds.left + 44, bounds.top + 202, bounds.right - bounds.left - 92, 12)
+    .fill({ color: 0xf5e6cd, alpha: 0.06 })
+    .rect(bounds.left + 74, bounds.top + 292, bounds.right - bounds.left - 154, 10)
+    .fill({ color: 0xfaecd5, alpha: 0.05 });
+tank.addChild(shimmer);
+
+const guide = new Graphics()
+    .roundRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top, 18)
+    .stroke({ width: 1.6, color: 0xf2dfc0, alpha: 0.25 });
+const ax = bounds.left + (bounds.right - bounds.left) * 0.36;
+const bx = bounds.left + (bounds.right - bounds.left) * 0.64;
+const midY = (bounds.top + bounds.bottom) * 0.5;
+guide.moveTo(ax, bounds.top).lineTo(ax, bounds.bottom)
+    .moveTo(bx, bounds.top).lineTo(bx, bounds.bottom)
+    .moveTo(bounds.left, midY - 18).lineTo(bounds.right, midY - 18)
+    .moveTo(bounds.left, midY + 18).lineTo(bounds.right, midY + 18)
+    .moveTo(bounds.left, bounds.top).lineTo(bounds.right, bounds.bottom)
+    .moveTo(bounds.right, bounds.top).lineTo(bounds.left, bounds.bottom)
+    .stroke({ width: 1.2, color: 0xf7ead3, alpha: 0.21 });
+tank.addChild(guide);
+
+const labelStyle = new TextStyle({
+    fontFamily: 'Georgia',
+    fontSize: 18,
+    fill: 0xf5ead9,
+    align: 'center',
+    fontStyle: 'italic'
+});
+
+function addMarker(label, x, y) {
+    const text = new Text({
+        text: label,
+        style: labelStyle,
+        anchor: 0.5
     });
-    await sleep(1000);
-    await Animate.to(fishsprite1,{
-        duration:1000,
-        x: 300,
-        y: 100,
-        tint: 0xFFFFFF,
-        easing: Animate.easeInOut
-    });
-    swim();
+    text.x = x;
+    text.y = y;
+    tank.addChild(text);
+    return text;
 }
 
-swim();
+addMarker('A', ax, bounds.top - 10);
+addMarker("A'", ax, bounds.bottom + 14);
+addMarker('B', bx, bounds.top - 10);
+addMarker("B'", bx, bounds.bottom + 14);
 
+function createFish(config) {
+    const fish = new Container();
+    const sprite = new Sprite(texture);
+    sprite.anchor.set(0.18, 0.5);
+    sprite.scale.set(config.scale * config.facing, config.scale);
+    sprite.tint = config.tint;
+    fish.addChild(sprite);
+
+    fish.sprite = sprite;
+    fish.baseX = config.x;
+    fish.baseY = config.y;
+    fish.baseScale = config.scale;
+    fish.facing = config.facing;
+    fish.range = config.range;
+    fish.speed = config.speed;
+    fish.phase = config.phase;
+    fish.bobAmp = config.bobAmp;
+    fish.state = 'idle';
+    fish.x = config.x;
+    fish.y = config.y;
+    return fish;
+}
+
+function setFishScale(fish, scaleX, scaleY) {
+    fish.sprite.scale.set(Math.abs(scaleX) * fish.facing, scaleY);
+}
+
+function clampPoint(x, y, pad = 24) {
+    return {
+        x: Math.max(bounds.left + pad, Math.min(bounds.right - pad, x)),
+        y: Math.max(bounds.top + pad, Math.min(bounds.bottom - pad, y))
+    };
+}
+
+function faceTargetX(fish, targetX) {
+    fish.facing = targetX >= fish.x ? 1 : -1;
+}
+
+const surfaceFish = createFish({
+    x: 282,
+    y: 244,
+    scale: 0.28,
+    tint: 0xD0A64D,
+    facing: 1,
+    range: 46,
+    speed: 0.0029,
+    phase: 0.4,
+    bobAmp: 2.8
+});
+
+const tapFish = createFish({
+    x: 632,
+    y: 214,
+    scale: 0.25,
+    tint: 0xD0A64D,
+    facing: -1,
+    range: 32,
+    speed: 0.0033,
+    phase: 1.2,
+    bobAmp: 2.2
+});
+
+tank.addChild(surfaceFish);
+tank.addChild(tapFish);
+
+async function animateTankPulse() {
+    while (true) {
+        await Promise.all([
+            Animate.to(water, {
+                duration: 1700,
+                tint: 0xE8DFCF,
+                alpha: 0.945,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(glass, {
+                duration: 1700,
+                alpha: 0.135,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(depthGlow, {
+                duration: 1700,
+                scaleX: 1.03,
+                scaleY: 1.03,
+                alpha: 1,
+                tint: 0xF1EEE3,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(shimmer, {
+                duration: 1700,
+                x: 10,
+                y: -2,
+                rotation: 0.006,
+                alpha: 0.94,
+                easing: Animate.easeInOut
+            })
+        ]);
+
+        await Promise.all([
+            Animate.to(water, {
+                duration: 1700,
+                tint: 0xC98276,
+                alpha: 0.9,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(glass, {
+                duration: 1700,
+                alpha: 0.1,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(depthGlow, {
+                duration: 1700,
+                scaleX: 1,
+                scaleY: 1,
+                alpha: 0.92,
+                tint: 0xC98276,
+                easing: Animate.easeInOut
+            }),
+            Animate.to(shimmer, {
+                duration: 1700,
+                x: 0,
+                y: 0,
+                rotation: 0,
+                alpha: 1,
+                easing: Animate.easeInOut
+            })
+        ]);
+    }
+}
+
+async function surfaceSequence() {
+    if (surfaceFish.state !== 'idle') {
+        return;
+    }
+
+    surfaceFish.state = 'surfacing';
+    faceTargetX(surfaceFish, surfaceFish.baseX);
+
+    await Animate.to(surfaceFish, {
+        duration: 900,
+        x: surfaceFish.baseX,
+        y: bounds.top + 26,
+        rotation: -0.2,
+        scale: surfaceFish.baseScale * 1.06,
+        tint: 0xA9824D,
+        alpha: 0.96,
+        easing: Animate.easeInOut
+    });
+
+    await sleep(220);
+
+    surfaceFish.state = 'returning';
+    await Animate.to(surfaceFish, {
+        duration: 1100,
+        x: surfaceFish.baseX,
+        y: surfaceFish.baseY,
+        rotation: 0,
+        scale: surfaceFish.baseScale,
+        tint: 0xD0A64D,
+        alpha: 1,
+        easing: Animate.easeInOut
+    });
+
+    surfaceFish.state = 'idle';
+}
+
+async function tapSequence(targetX, targetY) {
+    if (tapFish.state !== 'idle') {
+        return;
+    }
+
+    const target = clampPoint(targetX, targetY);
+    tapFish.state = 'to-target';
+    faceTargetX(tapFish, target.x);
+
+    await Animate.to(tapFish, {
+        duration: 1200,
+        x: target.x,
+        y: target.y,
+        rotation: -0.08,
+        scaleX: tapFish.baseScale * 1.08,
+        scaleY: tapFish.baseScale * 0.96,
+        tint: 0xC98276,
+        alpha: 0.95,
+        easing: Animate.easeInOut
+    });
+
+    await sleep(180);
+
+    tapFish.state = 'to-idle';
+    faceTargetX(tapFish, tapFish.baseX);
+
+    await Animate.to(tapFish, {
+        duration: 1200,
+        x: tapFish.baseX,
+        y: tapFish.baseY,
+        rotation: 0,
+        scale: tapFish.baseScale,
+        tint: 0xD79A8C,
+        alpha: 1,
+        easing: Animate.easeInOut
+    });
+
+    tapFish.state = 'idle';
+}
+
+surfaceFish.eventMode = 'static';
+surfaceFish.cursor = 'pointer';
+surfaceFish.on('pointertap', (event) => {
+    event.stopPropagation();
+    surfaceSequence();
+});
+
+glass.eventMode = 'static';
+glass.cursor = 'crosshair';
+glass.on('pointertap', (event) => {
+    tapSequence(event.global.x, event.global.y);
+});
+
+app.ticker.add((ticker) => {
+    const time = ticker.lastTime;
+
+    [surfaceFish, tapFish].forEach((fish, index) => {
+        if (fish.state !== 'idle') {
+            return;
+        }
+
+        const motion = time * fish.speed + fish.phase;
+        const flap = Math.sin(time * 0.028 + index * 0.8) * 0.016;
+        const bob = Math.sin(motion * 2.4) * fish.bobAmp;
+        const sway = Math.sin(motion) * fish.range;
+        const heading = Math.cos(motion) >= 0 ? 1 : -1;
+
+        fish.x = fish.baseX + sway;
+        fish.y = fish.baseY + bob;
+        fish.facing = heading;
+        setFishScale(fish, fish.baseScale + flap, fish.baseScale - flap * 0.4);
+    });
+});
+
+animateTankPulse();
 </script>
 
 </body>
